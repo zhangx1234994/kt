@@ -145,7 +145,7 @@ async function generateImages() {
             console.log("发送的数据:", imageData); // 调试日志
             
             // 发送请求到后端API - 使用JSON格式
-            const response = await fetch('/api/generate', {
+            const response = await fetch('/api/生成', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
