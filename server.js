@@ -36,23 +36,20 @@ publicFiles.forEach(file => {
 });
 
 // API路由：生成图片
-app.post('/api/generate', upload.single('image'), async (req, res) => {
+app.post('/api/generate', async (req, res) => {
     try {
         console.log('接收到的请求体:', req.body);
-        console.log('接收到的文件:', req.file);
         
-        const { prompt, size = '1024x1024' } = req.body;
+        const { prompt, size = '1024x1024', image: imageUrl } = req.body;
         
         let imageDataUrl;
         
-        // 检查是否有上传的文件
-        if (req.file) {
-            // 将上传的文件转换为base64
-            const imageBase64 = req.file.buffer.toString('base64');
-            const imageMimeType = req.file.mimetype;
-            imageDataUrl = `data:${imageMimeType};base64,${imageBase64}`;
+        // 检查是否有上传的文件或图片URL
+        if (imageUrl) {
+            // 使用提供的图片URL
+            imageDataUrl = imageUrl;
         } else {
-            console.log('未提供图片文件');
+            console.log('未提供图片URL');
             return res.status(400).json({ error: '请提供图片和提示词' });
         }
 
@@ -122,11 +119,13 @@ async function callVolcanoEngineAPI(imageUrl, prompt, size) {
             },
             response_format: "url",
             size: size === "2K" ? "2K" : "1024x1024",
-            stream: true,
+            // 在Vercel环境中禁用流式响应，避免超时问题
+            stream: process.env.VERCEL ? false : true,
             watermark: true
         };
 
         console.log('发送请求到火山方舟API:', JSON.stringify(requestData, null, 2));
+        console.log('当前环境:', process.env.VERCEL ? 'Vercel' : '本地');
 
         // 发送请求
         const response = await axios.post(`${baseUrl}/images/generations`, requestData, {
@@ -134,11 +133,18 @@ async function callVolcanoEngineAPI(imageUrl, prompt, size) {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${apiKey}`
             },
-            timeout: 120000, // 120秒超时
+            // 在Vercel环境中减少超时时间，避免函数超时
+            timeout: process.env.VERCEL ? 25000 : 120000, // Vercel环境25秒超时，本地120秒
             responseType: 'text' // 接收文本格式的响应
         });
 
-        console.log('API响应:', response.data);
+        console.log('API响应状态:', response.status);
+        console.log('API响应类型:', typeof response.data);
+        // 限制日志大小，避免日志过大
+        const logData = typeof response.data === 'string' 
+            ? response.data.substring(0, 500) + (response.data.length > 500 ? '...(已截断)' : '')
+            : '非字符串响应';
+        console.log('API响应(部分):', logData);
 
         // 解析响应数据
         let responseData;
@@ -149,7 +155,7 @@ async function callVolcanoEngineAPI(imageUrl, prompt, size) {
         // 首先尝试作为JSON解析
         try {
             responseData = JSON.parse(responseContent);
-            console.log('成功解析为JSON格式:', responseData);
+            console.log('成功解析为JSON格式');
             
             // 如果是JSON格式，直接提取图片URL
             if (responseData.data && responseData.data.length > 0) {
@@ -167,7 +173,6 @@ async function callVolcanoEngineAPI(imageUrl, prompt, size) {
             if (line.startsWith('data: ')) {
                 try {
                     const data = JSON.parse(line.substring(6));
-                    console.log('解析SSE数据行:', data);
                     
                     // 检查各种可能的事件类型和数据结构
                     if (data.type && data.type.includes('image_generation') && data.url) {
@@ -177,20 +182,39 @@ async function callVolcanoEngineAPI(imageUrl, prompt, size) {
                         data.data.forEach(item => {
                             if (item.url) imageUrls.push(item.url);
                         });
+                    } else if (data.url) {
+                        // 直接包含URL的情况
+                        imageUrls.push(data.url);
                     }
                 } catch (e) {
                     // 忽略JSON解析错误
-                    console.warn('解析SSE数据行时出错:', e);
+                    console.warn('解析SSE数据行时出错:', e.message);
                 }
             }
         }
         
         if (imageUrls.length > 0) {
-            console.log('从SSE中提取到的图片URL:', imageUrls);
+            console.log('从响应中提取到的图片URL数量:', imageUrls.length);
             return imageUrls;
         }
         
-        // 如果上述方法都无法提取URL，抛出错误
+        // 如果上述方法都无法提取URL，尝试直接从响应中查找URL模式
+        const urlRegex = /(https?:\/\/[^\s"]+)/g;
+        const matches = responseContent.match(urlRegex);
+        if (matches && matches.length > 0) {
+            console.log('通过正则表达式找到的URL数量:', matches.length);
+            // 过滤出可能是图片的URL
+            const imageUrlMatches = matches.filter(url => 
+                url.includes('.jpg') || url.includes('.jpeg') || 
+                url.includes('.png') || url.includes('.webp') ||
+                url.includes('image')
+            );
+            if (imageUrlMatches.length > 0) {
+                return imageUrlMatches;
+            }
+        }
+        
+        // 如果所有方法都失败，抛出错误
         throw new Error('未能从API响应中提取图片URL');
     } catch (error) {
         console.error('调用火山方舟API时出错:', error.response ? error.response.data : error.message);

@@ -192,8 +192,9 @@ async function generateImages() {
     resetBtn.addEventListener('click', () => {
         // 重置表单
         imageInput.value = '';
-        subjectElement.value = 'T恤';
-        imageSize.value = '2K';
+        promptInput.value = '';
+        imageCount.value = '3';
+        imageSize.value = '1024x1024';
         
         // 重置UI
         uploadArea.style.display = 'block';
