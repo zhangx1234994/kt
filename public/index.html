@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>产品印刷图提取 - Demo</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>产品印刷图提取工具</h1>
+            <p>智能图像处理系统</p>
+        </header>
+
+        <main>
+            <section class="upload-section">
+                <h2>上传图片</h2>
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📷</div>
+                    <p>点击或拖拽图片到此处上传</p>
+                    <input type="file" id="imageInput" accept="image/*" hidden>
+                </div>
+                <div class="image-preview" id="imagePreview" style="display: none;">
+                    <img id="previewImg" src="" alt="预览图片">
+                    <button id="removeImage" class="btn-remove">移除</button>
+                </div>
+            </section>
+
+            <div class="form-group">
+                    <label for="subjectElement">主体元素:</label>
+                    <input type="text" id="subjectElement" placeholder="例如：T恤、帽子、鞋子等" value="T恤">
+                    <small>输入需要提取花纹的主体元素，系统将自动生成结构化提示词，分步骤提取纯平面花纹纹理并去除褶皱</small>
+                </div>
+
+            <section class="options-section">
+                <h2>高级选项</h2>
+                <div class="option-group">
+                    <label for="imageSize">图片尺寸:</label>
+                    <select id="imageSize">
+                        <option value="1024x1024">1024x1024</option>
+                        <option value="1024x768">1024x768</option>
+                        <option value="768x1024">768x1024</option>
+                        <option value="1536x1024">1536x1024</option>
+                        <option value="1024x1536">1024x1536</option>
+                        <option value="2K" selected>2K</option>
+                    </select>
+                </div>
+            </section>
+
+            <section class="action-section">
+                <button id="generateBtn" class="btn-generate">生成图片</button>
+                <div id="loadingIndicator" class="loading-indicator" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>正在生成图片，请稍候...</p>
+                </div>
+            </section>
+
+            <section class="result-section" id="resultSection" style="display: none;">
+                <h2>生成结果</h2>
+                <div id="resultImages" class="result-images"></div>
+                <div class="result-actions">
+                    <button id="downloadAllBtn" class="btn-download">下载全部</button>
+                    <button id="resetBtn" class="btn-reset">重新开始</button>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>© 2024 产品印刷图提取工具</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
