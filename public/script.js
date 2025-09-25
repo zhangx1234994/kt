@@ -112,18 +112,28 @@ async function generateImages() {
     resultSection.style.display = 'none';
 
     try {
-        // 准备请求数据
-        const formData = new FormData();
-        
         // 检查是否有文件
         if (imageInput.files && imageInput.files[0]) {
+            // 准备文件上传请求数据
+            const formData = new FormData();
             formData.append('image', imageInput.files[0]);
+            formData.append('prompt', prompt);
+            formData.append('size', imageSize.value);
             
             // 发送请求到后端API - 使用文件上传路由
             const response = await fetch('/api/upload', {
                 method: 'POST',
                 body: formData
             });
+            
+            if (!response.ok) {
+                throw new Error('生成图片失败');
+            }
+            
+            const result = await response.json();
+            
+            // 显示结果
+            displayGeneratedImages(result.images);
         } else {
             // 如果没有文件，使用图片URL
             const imageData = {
@@ -131,6 +141,8 @@ async function generateImages() {
                 size: imageSize.value,
                 image: previewImg.src  // 使用预览图片的URL
             };
+            
+            console.log("发送的数据:", imageData); // 调试日志
             
             // 发送请求到后端API - 使用JSON格式
             const response = await fetch('/api/generate', {
@@ -140,15 +152,16 @@ async function generateImages() {
                 },
                 body: JSON.stringify(imageData)
             });
-
-        if (!response.ok) {
-            throw new Error('生成图片失败');
+            
+            if (!response.ok) {
+                throw new Error('生成图片失败');
+            }
+            
+            const result = await response.json();
+            
+            // 显示结果
+            displayGeneratedImages(result.images);
         }
-
-        const result = await response.json();
-        
-        // 显示结果
-        displayGeneratedImages(result.images);
     } catch (error) {
         console.error('生成图片时出错:', error);
         alert('生成图片时出错，请重试！');
