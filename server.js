@@ -38,6 +38,43 @@ publicFiles.forEach(file => {
 // API路由：生成图片
 app.post('/api/generate', upload.single('image'), async (req, res) => {
     try {
+        console.log('接收到的请求体:', req.body);
+        console.log('接收到的文件:', req.file);
+        
+        const { prompt, size = '1024x1024' } = req.body;
+        
+        let imageDataUrl;
+        
+        // 检查是否有上传的文件
+        if (req.file) {
+            // 将上传的文件转换为base64
+            const imageBase64 = req.file.buffer.toString('base64');
+            const imageMimeType = req.file.mimetype;
+            imageDataUrl = `data:${imageMimeType};base64,${imageBase64}`;
+        } else {
+            console.log('未提供图片文件');
+            return res.status(400).json({ error: '请提供图片和提示词' });
+        }
+
+        if (!prompt) {
+            console.log('未提供提示词');
+            return res.status(400).json({ error: '请提供提示词' });
+        }
+
+        // 调用火山方舟API
+        const response = await callVolcanoEngineAPI(imageDataUrl, prompt, size);
+        
+        // 返回生成的图片
+        res.json({ images: response });
+    } catch (error) {
+        console.error('生成图片时出错:', error);
+        res.status(500).json({ error: '生成图片失败' });
+    }
+});
+
+// 文件上传路由
+app.post('/api/upload', upload.single('image'), async (req, res) => {
+    try {
         const { prompt, size = '1024x1024' } = req.body;
         
         if (!req.file || !prompt) {
@@ -103,31 +140,58 @@ async function callVolcanoEngineAPI(imageUrl, prompt, size) {
 
         console.log('API响应:', response.data);
 
-        // 解析SSE格式的响应
-        const lines = response.data.split('\n');
+        // 解析响应数据
+        let responseData;
+        
+        // 检查响应是否为字符串类型
+        const responseContent = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+        
+        // 首先尝试作为JSON解析
+        try {
+            responseData = JSON.parse(responseContent);
+            console.log('成功解析为JSON格式:', responseData);
+            
+            // 如果是JSON格式，直接提取图片URL
+            if (responseData.data && responseData.data.length > 0) {
+                return responseData.data.map(item => item.url);
+            }
+        } catch (e) {
+            console.log('不是标准JSON格式，尝试解析SSE格式');
+        }
+        
+        // 如果不是JSON格式或JSON中没有所需数据，尝试解析SSE格式
+        const lines = responseContent.split('\n');
         const imageUrls = [];
         
         for (const line of lines) {
             if (line.startsWith('data: ')) {
                 try {
                     const data = JSON.parse(line.substring(6));
+                    console.log('解析SSE数据行:', data);
                     
-                    // 检查事件类型
-                    if (data.type === 'image_generation.partial_succeeded' && data.url) {
+                    // 检查各种可能的事件类型和数据结构
+                    if (data.type && data.type.includes('image_generation') && data.url) {
                         imageUrls.push(data.url);
+                    } else if (data.data && Array.isArray(data.data)) {
+                        // 处理可能的数组格式
+                        data.data.forEach(item => {
+                            if (item.url) imageUrls.push(item.url);
+                        });
                     }
                 } catch (e) {
                     // 忽略JSON解析错误
-                    console.warn('解析SSE数据时出错:', e);
+                    console.warn('解析SSE数据行时出错:', e);
                 }
             }
         }
-
+        
         if (imageUrls.length > 0) {
+            console.log('从SSE中提取到的图片URL:', imageUrls);
             return imageUrls;
-        } else {
-            throw new Error('未能从API响应中提取图片URL');
         }
+        
+        // 如果上述方法都无法提取URL，抛出错误
+        throw new Error('未能从API响应中提取图片URL');
     } catch (error) {
         console.error('调用火山方舟API时出错:', error.response ? error.response.data : error.message);
         throw new Error('调用火山方舟API失败');

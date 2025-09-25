@@ -5,8 +5,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const imagePreview = document.getElementById('imagePreview');
     const previewImg = document.getElementById('previewImg');
     const removeImageBtn = document.getElementById('removeImage');
-    const promptInput = document.getElementById('promptInput');
-    const imageCount = document.getElementById('imageCount');
+    const subjectElement = document.getElementById('subjectElement');
     const imageSize = document.getElementById('imageSize');
     const generateBtn = document.getElementById('generateBtn');
     const loadingIndicator = document.getElementById('loadingIndicator');
@@ -193,9 +192,8 @@ async function generateImages() {
     resetBtn.addEventListener('click', () => {
         // 重置表单
         imageInput.value = '';
-        promptInput.value = '';
-        imageCount.value = '3';
-        imageSize.value = '1024x1024';
+        subjectElement.value = 'T恤';
+        imageSize.value = '2K';
         
         // 重置UI
         uploadArea.style.display = 'block';

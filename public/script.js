@@ -146,24 +146,52 @@ async function generateImages() {
 function displayGeneratedImages(images) {
     resultImages.innerHTML = '';
     
+    if (!images || images.length === 0) {
+        const errorMsg = document.createElement('div');
+        errorMsg.className = 'error-message';
+        errorMsg.textContent = '未能生成图片，请重试';
+        resultImages.appendChild(errorMsg);
+        resultSection.style.display = 'block';
+        return;
+    }
+    
     images.forEach((imageData, index) => {
         const imageItem = document.createElement('div');
         imageItem.className = 'result-image-item';
         
         const img = document.createElement('img');
-        img.src = imageData;
-        img.alt = `生成结果 ${index + 1}`;
-        
-        const downloadBtn = document.createElement('button');
-        downloadBtn.className = 'btn-download';
-        downloadBtn.textContent = '下载';
-        downloadBtn.style.marginTop = '10px';
-        downloadBtn.style.width = '100%';
-        downloadBtn.addEventListener('click', () => downloadImage(imageData, `result_${index + 1}.png`));
-        
-        imageItem.appendChild(img);
-        imageItem.appendChild(downloadBtn);
-        resultImages.appendChild(imageItem);
+        // 确保图片URL是有效的
+        if (imageData && typeof imageData === 'string') {
+            img.src = imageData;
+            img.alt = `生成结果 ${index + 1}`;
+            
+            // 添加错误处理
+            img.onerror = function() {
+                this.onerror = null;
+                this.src = ''; // 清除错误的src
+                this.alt = '图片加载失败';
+                this.style.height = '200px';
+                this.style.background = '#f8d7da';
+                this.style.display = 'flex';
+                this.style.alignItems = 'center';
+                this.style.justifyContent = 'center';
+                
+                const errorText = document.createElement('span');
+                errorText.textContent = '图片加载失败';
+                this.parentNode.insertBefore(errorText, this.nextSibling);
+            };
+            
+            const downloadBtn = document.createElement('button');
+            downloadBtn.className = 'btn-download';
+            downloadBtn.textContent = '下载';
+            downloadBtn.style.marginTop = '10px';
+            downloadBtn.style.width = '100%';
+            downloadBtn.addEventListener('click', () => downloadImage(imageData, `result_${index + 1}.png`));
+            
+            imageItem.appendChild(img);
+            imageItem.appendChild(downloadBtn);
+            resultImages.appendChild(imageItem);
+        }
     });
     
     resultSection.style.display = 'block';
