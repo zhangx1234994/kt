@@ -114,15 +114,32 @@ async function generateImages() {
     try {
         // 准备请求数据
         const formData = new FormData();
-        formData.append('image', imageInput.files[0]);
-        formData.append('prompt', prompt);
-        formData.append('size', imageSize.value);
-
-        // 发送请求到后端API
-        const response = await fetch('/api/generate', {
-            method: 'POST',
-            body: formData
-        });
+        
+        // 检查是否有文件
+        if (imageInput.files && imageInput.files[0]) {
+            formData.append('image', imageInput.files[0]);
+            
+            // 发送请求到后端API - 使用文件上传路由
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+        } else {
+            // 如果没有文件，使用图片URL
+            const imageData = {
+                prompt: prompt,
+                size: imageSize.value,
+                image: previewImg.src  // 使用预览图片的URL
+            };
+            
+            // 发送请求到后端API - 使用JSON格式
+            const response = await fetch('/api/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(imageData)
+            });
 
         if (!response.ok) {
             throw new Error('生成图片失败');
