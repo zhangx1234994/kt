@@ -96,13 +96,12 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
 
 // 调用火山方舟API的函数
 async function callVolcanoEngineAPI(imageUrl, prompt, size) {
-    const apiKey = process.env.ARK_API_KEY;
+    // 使用环境变量中的API密钥，如果没有则使用默认密钥
+    const apiKey = process.env.ARK_API_KEY || '3978d498-75c8-4a81-a60a-e53dcda6e7eb';
     const baseUrl = process.env.ARK_BASE_URL || 'https://ark.cn-beijing.volces.com/api/v3';
     const modelName = process.env.MODEL_NAME || 'doubao-seedream-4-0-250828';
     
-    if (!apiKey) {
-        throw new Error('未配置火山方舟API密钥');
-    }
+    // 不再需要检查apiKey是否存在，因为我们已经提供了默认值
 
     try {
         // 处理图片URL，确保是数组格式
